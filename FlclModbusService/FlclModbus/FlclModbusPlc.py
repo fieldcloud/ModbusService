@@ -17,6 +17,9 @@ from pymodbus.server.sync import StartUdpServer
 from pymodbus.server.sync import StartSerialServer
 from twisted.internet.defer import inlineCallbacks
 
+__version__='0.1.0'
+
+
 class PlcClient(object):
 
     '''
@@ -28,7 +31,11 @@ class PlcClient(object):
 
 
     def __init__(self, client):
-        
+        '''
+            Initialize PlcClient creation & create registers list
+            :param client: Synchronous modbus client from pymongo
+            :type client: pymongo sync client
+        '''
         self.client=client
         registers=factory.make_register_table()
 
@@ -59,7 +66,7 @@ class PlcClient(object):
 #------------------------------------------------------------------------------#
 # Modbus communication methods                                                 #
 #------------------------------------------------------------------------------#
-    def read_one(number):
+    def read_one(self, number):
         '''
             Load data from modbus plc in register, store in dedicated register
             & return specific register
@@ -87,12 +94,13 @@ class PlcClient(object):
         return reg
 
 
-    def write_one(number, value):
+    def write_one(self, number, value):
         '''
 
         '''
         try:
             reg = self.get_register(number)
+            reg.set_value(value)
             self.client.connect()
             desc = reg.get_type_description()
             method_name = desc.get('write_one')
@@ -104,7 +112,7 @@ class PlcClient(object):
         return self.read_one(number)
 
 
-    def read_multi(first, nb):
+    def read_multi(self, first, nb):
         list=[]
         try:
             reg = self.get_register(first)
@@ -127,7 +135,7 @@ class PlcClient(object):
         return list
 
 
-    def write_multi(start, values):
+    def write_multi(self, start, value, nb):
         list=[]
         for i in (0, len(values)):
             list.append(self.write_one((start+i), values[i]))
@@ -144,16 +152,71 @@ class PlcClient(object):
 #------------------------------------------------------------------------------#
 # Direct use methods                                                           #
 #------------------------------------------------------------------------------#
-    def read_simple_int(self, number):
+    def read_int(self, number):
         r=self.read_one(number)
         return formatter.make_int_from_register(r)
 
 
-    def write_simple_int(self, number, val):
+    def read_int_multi(self, number, nb):
+        r=self.read_multi(number, nb)
+        return formatter.make_int_from_list(r)
+
+
+    def read_float(self, number, coef):
+        r=self.read_one(number)
+        return formatter.make_float_from_register(r, coef)
+
+
+    def read_float_multi(self, number, nb):
+        r=self.read_multi(number, nb)
+        return formatter.make_float_from_list(r, coef)
+
+
+    def read_bool(self, number):        
+        r=self.read_one(number)
+        return formatter.make_boolean_from_register(r)
+
+
+    def read_bool_at(self, number, pos):
+        r=self.read_one(number)
+        return formatter.make_boolean_from_bit(r, pos)
+
+
+    def write_int(self, number, val):
         r=self.write_one(number, val)
         return formatter.make_int_from_register(r)
 
-        
+
+    def write_int_multi(self, number, val, nb):
+        r=self.write_multi(number, val)
+        return formatter.make_int_from_list(r)
+
+
+    def write_float(self, number, val, coef):
+        val = int(val*coef)
+        r=self.write_one(number, val)
+        return formatter.make_int_from_register(r)
+
+
+    def write_float_multi(self, number, val, nb, coef):
+        val = int(val*coef)
+        r=self.write_multi(number, val)
+        return formatter.make_int_from_list(r)
+
+
+    def write_boolean(self, number, val):
+        r=self.get_register(number)
+        r=formatter.set_bool_in_register(val, r)
+        r=self.write_one(number, r.value)
+        return formatter.make_int_from_register(r)
+
+
+    def write_boolean_at(self, number, val, pos):
+        r=self.get_register(number)
+        r=formatter.set_bool_in_register_at(val, r, pos)
+        r=self.write_one(number, r.value)
+        return formatter.make_int_from_register(r)
+
 
 class VirtualPlc(object):
 

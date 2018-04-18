@@ -153,13 +153,13 @@ class ModbusRegisterFormatter(object):
 
 
     @staticmethod
-    def set_int_to_register(value, register):
+    def set_int_in_register(value, register):
         register.set_value(value)
         return register
 
 
     @staticmethod
-    def set_bool_to_register(value, register):
+    def set_bool_in_register(value, register):
         if value==True:
             register.set_value(0x01)
         else:
@@ -168,7 +168,7 @@ class ModbusRegisterFormatter(object):
 
 
     @staticmethod
-    def set_bool_to_register_at(value, register, pos):
+    def set_bool_in_register_at(value, register, pos):
         if value==True:
             v=1
         else:
@@ -205,7 +205,7 @@ class ModbusRegisterFormatter(object):
 
 
     @staticmethod
-    def make_boolean_from_bit(register, pos=pos):
+    def make_boolean_from_bit(register, pos):
         v=register.get_bit_at(pos)
         return v==1
 

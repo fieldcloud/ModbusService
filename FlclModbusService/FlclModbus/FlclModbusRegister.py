@@ -55,6 +55,12 @@ class ModbusRegister(object):
         self.bin_value= self.bin_value.lstrip('0b')
 
 
+    def set_value(self, value):
+        self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
+        self.bin_value= self.bin_value.lstrip('0b')
+        self.value=value
+
+
     def get_bit_at(self,pos=0):
         if pos >= 0 and pos <16:
             return int(self.bin_value[abs(pos-15)])
@@ -144,6 +150,34 @@ class ModbusHoldingRegister(ModbusReadWriteRegister):
 
 
 class ModbusRegisterFormatter(object):
+
+
+    @staticmethod
+    def set_int_to_register(value, register):
+        register.set_value(value)
+        return register
+
+
+    @staticmethod
+    def set_bool_to_register(value, register):
+        if value==True:
+            register.set_value(0x01)
+        else:
+            register.set_value(0x00)
+        return register
+
+
+    @staticmethod
+    def set_bool_to_register_at(value, register, pos):
+        if value==True:
+            v=1
+        else:
+            v=0
+        try:
+            register.set_bit_value(pos, v)
+        except:
+            pass
+        return register
 
 
     @staticmethod

@@ -29,7 +29,7 @@ def create_client(com_conf):
     return client
 
 
-def create_plc_accessor(plc_conf):
+def create_plc_client(plc_conf):
     plc=None
     if plc_conf is not None:
         client = create_client(plc_conf.get('plc_com'))
@@ -38,7 +38,6 @@ def create_plc_accessor(plc_conf):
             plc.add_register(create_register(r.get('type'),
                                              r.get('address'),
                                              value=r.get('value'))
-        plc.start_com()
     return plc
 
 
@@ -61,13 +60,13 @@ def make_register_table():
     registers=[]
     for i in range(0, 9999):
         reg=ModbusCoilRegister(i)
-        registers.append({reg.number:reg})
+        registers.append({str(reg.number):reg})
     for i in range(0, 9999):
         reg=ModbusDiscreteInputRegister(i)
-        registers.append({reg.number:reg})
+        registers.append({str(reg.number):reg})
     for i in range(0, 9999):
         reg=ModbusInputRegister(i)
-        registers.append({reg.number:reg})
+        registers.append({str(reg.number):reg})
     for i in range(0, 9999):
         reg=ModbusHoldingRegister(i)
-        registers.append({reg.number:reg})
+        registers.append({str(reg.number):reg})

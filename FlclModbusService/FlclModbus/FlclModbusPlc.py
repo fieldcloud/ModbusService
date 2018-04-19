@@ -183,8 +183,17 @@ class PlcClient(object):
 
     def _make_value_list_from_int(self, val, nb):
         values=[nb]
-        
+        for i in range(0, nb):
+            values.append(val >> (i*8) & 0xFF)
+        values.reverse()
         return values
+
+
+    def _make_int_from_value_list(self, bytes):
+        result = 0
+        for b in bytes:
+            result = result * 256 + int(b)
+        return result
 
 #------------------------------------------------------------------------------#
 # Asynchronous methods                                                         #

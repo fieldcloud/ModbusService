@@ -319,7 +319,7 @@ class PlcClient(object):
         return r
 
 
-    def write_boolean(self, params):
+    def write_bool(self, params):
         number=params.get('number')
         val=params.get('val')
         r=self.get_register(number)
@@ -332,7 +332,7 @@ class PlcClient(object):
         return r
 
 
-    def write_boolean_at(self, params):
+    def write_bool_at(self, params):
         number=params.get('number')
         val=params.get('val')
         pos=params.get('pos')

@@ -66,16 +66,18 @@ class PlcClient(object):
 #------------------------------------------------------------------------------#
 # Modbus communication methods                                                 #
 #------------------------------------------------------------------------------#
-    def read_one(self, number):
+    def read_one(self, params):
         '''
             Load data from modbus plc in register, store in dedicated register
             & return specific register
-            :param number: modbus number
-            :type number: int
-            :return: updated register
-            :rtype: Modbus register
+            :param paramsr: dict containing parameters (number)
+            :type params: dict
+            :return: list of register value
+            :rtype: list
         '''
+        list=[]
         try:
+            number=params.get('number')
             reg = self.get_register(number)
             self.client.connect()
             desc = reg.get_type_description()
@@ -91,14 +93,21 @@ class PlcClient(object):
         except Exception as e:
             print e.args
             reg=None
-        return reg
+        return list.append(self._make_resp_from_register(reg))
 
 
-    def write_one(self, number, value):
+    def write_one(self, params):
         '''
-
+            Write value to Plc, Load data from modbus plc in register, 
+            store in dedicated register & return specific register
+            :param paramsr: dict containing parameters (number, value)
+            :type params: dict
+            :return: list of register value
+            :rtype: list
         '''
         try:
+            number=params.get('number')
+            value=params.get('value')
             reg = self.get_register(number)
             reg.set_value(value)
             self.client.connect()
@@ -112,9 +121,19 @@ class PlcClient(object):
         return self.read_one(number)
 
 
-    def read_multi(self, first, nb):
+    def read_multi(self, params):
+        '''
+            Load data from modbus plc in registers lis, 
+            store in dedicated registers & return specific registers
+            :param paramsr: dict containing parameters (start, count)
+            :type params: dict
+            :return: list of register value
+            :rtype: list
+        '''
         list=[]
         try:
+            first=params.get('start')
+            nb=params.get('count')
             reg = self.get_register(first)
             self.client.connect()
             desc = reg.get_type_description()
@@ -128,94 +147,194 @@ class PlcClient(object):
                 else:
                     v = 0
                 reg.value=v
-                list.append(reg)
+                list.append(self._make_resp_from_register(reg))
             self.client.close()
         except Exception as e:
             print e.args
         return list
 
 
-    def write_multi(self, start, value, nb):
+    def write_multi(self, params):
+        '''
+            Write value to Plc, Load data from modbus plc in register, 
+            store in dedicated register & return specific register
+            :param paramsr: dict containing parameters (start, value, count)
+            :type params: dict
+            :return: list of register value
+            :rtype: list
+        '''
         list=[]
-        for i in (0, len(values)):
-            list.append(self.write_one((start+i), values[i]))
+        start=params.get('start')
+        value=params.get('value')
+        nb=params.get('count')
+        values=self._make_value_list_from_int(value, nb)
+        for i in (0, nb):
+            r=self.write_one((start+i), values[i])
+            if len(r] = 1:
+               list.append(r[0])
         return list
+
+
+    def _make_resp_from_register(self, register):
+        resp = {}
+        resp['number']=register.number
+        resp['value']=register.value
+
+
+    def _make_value_list_from_int(self, val, nb):
+        values=[nb]
+        
+        return values
 
 #------------------------------------------------------------------------------#
 # Asynchronous methods                                                         #
 #------------------------------------------------------------------------------#
     @inlineCallbacks
-    def wait(self, delay):
+    def wait(self, params):
+        delay=params.get('delay')
         yield sleep(delay)
+        yield returnValue({})
 
 
 #------------------------------------------------------------------------------#
 # Direct use methods                                                           #
 #------------------------------------------------------------------------------#
-    def read_int(self, number):
-        r=self.read_one(number)
-        return formatter.make_int_from_register(r)
+    def read_int(self, params):
+        r=self.read_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_int_from_register(reg))
+        return r
 
 
-    def read_int_multi(self, number, nb):
-        r=self.read_multi(number, nb)
-        return formatter.make_int_from_list(r)
+    def read_int_multi(self, params):
+        r=self.read_multi(params)
+        reg_list=[]
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            reg_list.append(reg)
+        v={}
+        v['name']=r[params.get('name')]
+        v['value']=formatter.make_int_from_list(reg_list)
+        r.append(v)
+        return r
 
 
-    def read_float(self, number, coef):
-        r=self.read_one(number)
-        return formatter.make_float_from_register(r, coef)
+    def read_float(self, params):
+        coef=params.get('coef')
+        r=self.read_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_float_from_register(reg, coef)
+        return r
 
 
-    def read_float_multi(self, number, nb):
-        r=self.read_multi(number, nb)
-        return formatter.make_float_from_list(r, coef)
+    def read_float_multi(self, params):
+        coef=params.get('coef')
+        nb=params.get('nb')
+        r=self.read_multi(params)
+        reg_list=[]
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            reg_list.append(reg)
+        v={}
+        v['name']=r[params.get('name')]
+        v['value']= formatter.make_float_from_list(r, nb, coef)
+        r.append(v)
+        return r
 
 
-    def read_bool(self, number):        
-        r=self.read_one(number)
-        return formatter.make_boolean_from_register(r)
+    def read_bool(self, params):
+        r=self.read_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_boolean_from_register(reg)
+        return r
 
 
-    def read_bool_at(self, number, pos):
-        r=self.read_one(number)
-        return formatter.make_boolean_from_bit(r, pos)
+    def read_bool_at(self, params):
+        pos=params.get('pos')
+        r=self.read_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_boolean_from_bit(reg, pos)
+        return r
 
 
-    def write_int(self, number, val):
-        r=self.write_one(number, val)
-        return formatter.make_int_from_register(r)
+    def write_int(self, params):
+        r=self.write_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_int_from_register(reg)
+        return r
 
 
-    def write_int_multi(self, number, val, nb):
-        r=self.write_multi(number, val)
-        return formatter.make_int_from_list(r)
+    def write_int_multi(self, params):
+        r=self.write_multi(params)
+        reg_list=[]
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            reg_list.append(reg)
+        v={}
+        v['name']=r[params.get('name')]
+        v['value']= formatter.make_int_from_list(r)
+        r.append(v)
+        return r
 
 
-    def write_float(self, number, val, coef):
+    def write_float(self, params):
+        val=params.get('val')
+        coef=params.get('coef')
         val = int(val*coef)
-        r=self.write_one(number, val)
-        return formatter.make_int_from_register(r)
+        params['val']=val
+        r=self.write_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_float_from_register(reg, coef)
+        return r
 
 
-    def write_float_multi(self, number, val, nb, coef):
+    def write_float_multi(self, params):
+        val=params.get('val')
         val = int(val*coef)
-        r=self.write_multi(number, val)
-        return formatter.make_int_from_list(r)
+        params['val']=val
+        r=self.write_multi(params)
+        reg_list=[]
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            reg_list.append(reg)
+        v={}
+        v['name']=r[params.get('name')]
+        v['value']=formatter.make_int_from_list(r)
+        r.append(v)
+        return r
 
 
-    def write_boolean(self, number, val):
+    def write_boolean(self, params):
+        number=params.get('number')
+        val=params.get('val')
         r=self.get_register(number)
         r=formatter.set_bool_in_register(val, r)
-        r=self.write_one(number, r.value)
-        return formatter.make_int_from_register(r)
+        params['val']=val
+        r=self.write_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_int_from_register(r)
+        return r
 
 
-    def write_boolean_at(self, number, val, pos):
+    def write_boolean_at(self, params):
+        number=params.get('number')
+        val=params.get('val')
+        pos=params.get('pos')
         r=self.get_register(number)
         r=formatter.set_bool_in_register_at(val, r, pos)
-        r=self.write_one(number, r.value)
-        return formatter.make_int_from_register(r)
+        params['val']=val
+        r=self.write_one(params)
+        for resp in r:
+            reg=self.get_register(resp.get('number'))
+            resp['value'] = formatter.make_int_from_register(r)
+        return r
 
 
 class VirtualPlc(object):

@@ -6,7 +6,6 @@ Module used to manage communication from and to PLCs
 '''
 
 import FlclModbus.FlclModbusFactory as factory
-import FlclModbus.FlclModbusComFactory as com_factory
 from FlclModbus.FlclModbusRegister import *
 import FlclModbus.FlclModbusRegister.ModbusRegisterFormatter as formatter
 from FlclModbus.util import sleep, int_to_bytes, bytes_to_int

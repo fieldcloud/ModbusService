@@ -9,7 +9,7 @@ import FlclModbus.FlclModbusFactory as factory
 import FlclModbus.FlclModbusComFactory as com_factory
 from FlclModbus.FlclModbusRegister import *
 import FlclModbus.FlclModbusRegister.ModbusRegisterFormatter as formatter
-from FlclModbus.util import sleep
+from FlclModbus.util import sleep, int_to_bytes, bytes_to_int
 import logging
 from datetime import datetime
 from pymodbus.server.sync import StartTcpServer
@@ -28,9 +28,10 @@ class PlcClient(object):
 
     registers=[]
     client=None
+    id='demo'
 
 
-    def __init__(self, client):
+    def __init__(self, client, id):
         '''
             Initialize PlcClient creation & create registers list
             :param client: Synchronous modbus client from pymongo
@@ -167,7 +168,7 @@ class PlcClient(object):
         start=params.get('start')
         value=params.get('value')
         nb=params.get('count')
-        values=self._make_value_list_from_int(value, nb)
+        values=int_to_bytes(value, nb)
         for i in (0, nb):
             r=self.write_one((start+i), values[i])
             if len(r] = 1:
@@ -180,20 +181,6 @@ class PlcClient(object):
         resp['number']=register.number
         resp['value']=register.value
 
-
-    def _make_value_list_from_int(self, val, nb):
-        values=[nb]
-        for i in range(0, nb):
-            values.append(val >> (i*8) & 0xFF)
-        values.reverse()
-        return values
-
-
-    def _make_int_from_value_list(self, bytes):
-        result = 0
-        for b in bytes:
-            result = result * 256 + int(b)
-        return result
 
 #------------------------------------------------------------------------------#
 # Asynchronous methods                                                         #

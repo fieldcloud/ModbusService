@@ -5,10 +5,13 @@
 
 '''
 
-HOLDING_REGISTER=0X00
-COIL_REGISTER=0X01
-INPUT_REGISTER=0X02
-DISCRETE_INPUT_REGISTER=0X03
+from FlclModbus.util import int_to_bytes, bytes_to_int
+
+
+HOLDING_REGISTER='holding'
+COIL_REGISTER='coil'
+INPUT_REGISTER='input'
+DISCRETE_INPUT_REGISTER='discrete_input'
 
 REGISTER_TYPES = {
     'coil': {
@@ -53,6 +56,7 @@ class ModbusRegister(object):
         self.unit=unit
         self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
         self.bin_value= self.bin_value.lstrip('0b')
+        self.number=self.address+REGISTER_TYPES.get(type).get('offset')
 
 
     def set_value(self, value):
@@ -69,17 +73,7 @@ class ModbusRegister(object):
 
 
     def get_type_description(self):
-        d={}
-        if self.type is not None:
-            if self.type == HOLDING_REGISTER:
-                d=REGISTER_TYPES.get('holding')
-            elif self.type == COIL_REGISTER:
-                d=REGISTER_TYPES.get('coil')
-            elif self.type == INPUT_REGISTER:
-                d=REGISTER_TYPES.get('input')
-            elif self.type == DISCRETE_INPUT_REGISTER:
-                d=REGISTER_TYPES.get('discrete_input')
-        return d
+        return REGISTER_TYPES.get(self.type)
 
 
 class ModbusReadWriteRegister(ModbusRegister):
@@ -105,11 +99,6 @@ class ModbusCoilRegister(ModbusReadWriteRegister):
 
     def __init__(self, address, value=0, unit=0x01):
         ModbusRegister(self, COIL_REGISTER, address, value=value, unit=unit)
-        self.number=self.address+REGISTER_TYPES.get('coil').get('offset')
-
-
-    def get_type_description(self, type):
-        return REGISTER_TYPES.get('coil')
 
 
 class ModbusDiscreteInputRegister(ModbusRegister):
@@ -118,12 +107,6 @@ class ModbusDiscreteInputRegister(ModbusRegister):
     def __init__(self, address, value=0, unit=0x01):
         ModbusRegister(self, DISCRETE_INPUT_REGISTER, address, value=value,
                        unit=unit)
-        self.number=self.address+REGISTER_TYPES.get('discrete_input')
-                                                    .get('offset')
-
-
-    def get_type_description(self):
-        return REGISTER_TYPES.get('discrete_input')
 
 
 class ModbusInputRegister(ModbusRegister):
@@ -131,11 +114,6 @@ class ModbusInputRegister(ModbusRegister):
 
     def __init__(self, address, value=0, unit=0x01):
         ModbusRegister(self, INPUT_REGISTER, address, value=value, unit=unit)
-        self.number=self.address+REGISTER_TYPES.get('input').get('offset')
-
-
-    def get_type_description(self):
-        return REGISTER_TYPES.get('input')
 
 
 class ModbusHoldingRegister(ModbusReadWriteRegister):
@@ -143,10 +121,6 @@ class ModbusHoldingRegister(ModbusReadWriteRegister):
 
     def __init__(self, address, value=0, unit=0x01):
         ModbusRegister(self, HOLDING_REGISTER, address, value=value, unit=unit)
-        self.number=self.address+REGISTER_TYPES.get('holding').get('offset')
-
-    def get_type_description(self):
-        return REGISTER_TYPES.get('holding')
 
 
 class ModbusRegisterFormatter(object):
@@ -156,6 +130,26 @@ class ModbusRegisterFormatter(object):
     def set_int_in_register(value, register):
         register.set_value(value)
         return register
+
+
+    @staticmethod
+    def set_int_in_register_list(value, registers):
+        il=int_to_bytes(value, len(registers))
+        for i in range(0, len(registers)):
+            registers[i].value=il[i]
+        return registers
+
+
+    @staticmethod
+    def set_float_in_register(value, register, coef):
+        val=int(value*coef)
+        return ModbusRegisterFormatter.set_int_in_register(val, register)
+
+
+    @staticmethod
+    def set_float_in_register_list(value, registers, coef):
+        val=int(value*coef)
+        return ModbusRegisterFormatter.set_int_in_register_list(val, registers)
 
 
     @staticmethod
@@ -187,10 +181,10 @@ class ModbusRegisterFormatter(object):
 
     @staticmethod
     def make_int_from_list(registers):
-        bs='0b'
+        l=[]
         for reg in registers:
-            bs='{}{}'.format(bs, reg.bin_value)
-        return int(bs, 2)
+            l.append(reg.value)
+        return bytes_to_int(l)
 
 
     @staticmethod

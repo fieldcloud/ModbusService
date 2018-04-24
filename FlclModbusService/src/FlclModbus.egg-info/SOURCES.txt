@@ -1,0 +1,14 @@
+setup.cfg
+setup.py
+src/FlclModbus/FlclModbusAction.py
+src/FlclModbus/FlclModbusFactory.py
+src/FlclModbus/FlclModbusGateway.py
+src/FlclModbus/FlclModbusPlc.py
+src/FlclModbus/FlclModbusRegister.py
+src/FlclModbus/__init__.py
+src/FlclModbus/util.py
+src/FlclModbus.egg-info/PKG-INFO
+src/FlclModbus.egg-info/SOURCES.txt
+src/FlclModbus.egg-info/dependency_links.txt
+src/FlclModbus.egg-info/requires.txt
+src/FlclModbus.egg-info/top_level.txt

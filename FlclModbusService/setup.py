@@ -36,5 +36,7 @@ setup(
     keywords = ['iot', 'grove', 'internet of things', 'prototyping',
                 'clouding things', 'fieldcloud'],
 
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
     install_requires = ['pymodbus', 'twisted']
 )

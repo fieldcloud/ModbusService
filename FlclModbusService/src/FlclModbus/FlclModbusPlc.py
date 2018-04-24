@@ -5,7 +5,7 @@ Module used to manage communication from and to PLCs
 
 '''
 
-import FlclModbus.FlclModbusFactory as factory
+from FlclModbus.FlclModbusFactory import *
 from FlclModbus.FlclModbusRegister import *
 import FlclModbus.FlclModbusRegister.ModbusRegisterFormatter as formatter
 from FlclModbus.util import sleep, int_to_bytes, bytes_to_int
@@ -37,7 +37,7 @@ class PlcClient(object):
             :type client: pymongo sync client
         '''
         self.client=client
-        registers=factory.make_register_table()
+        registers=make_register_table()
 
 
 #------------------------------------------------------------------------------#
@@ -170,7 +170,7 @@ class PlcClient(object):
         values=int_to_bytes(value, nb)
         for i in (0, nb):
             r=self.write_one((start+i), values[i])
-            if len(r] = 1:
+            if len(r) == 1:
                list.append(r[0])
         return list
 
@@ -198,7 +198,7 @@ class PlcClient(object):
         r=self.read_one(params)
         for resp in r:
             reg=self.get_register(resp.get('number'))
-            resp['value'] = formatter.make_int_from_register(reg))
+            resp['value'] = formatter.make_int_from_register(reg)
         return r
 
 

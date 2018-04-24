@@ -36,7 +36,7 @@ def create_plc_client(plc_conf):
         for r in plc_conf.get('registers'):
             plc.add_register(create_register(r.get('type'),
                                              r.get('address'),
-                                             value=r.get('value'))
+                                             value=r.get('value')))
     return plc
 
 

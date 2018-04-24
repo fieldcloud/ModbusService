@@ -1,7 +1,0 @@
-setup.cfg
-setup.py
-FlclModbus.egg-info/PKG-INFO
-FlclModbus.egg-info/SOURCES.txt
-FlclModbus.egg-info/dependency_links.txt
-FlclModbus.egg-info/requires.txt
-FlclModbus.egg-info/top_level.txt

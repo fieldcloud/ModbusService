@@ -39,10 +39,11 @@ class FlclModbusGateway(object):
     def execute_action(self, name, plc_id):
         plc = self._get_plc_by_id(plc_id)
         action = self._get_action_by_name(name)
+        last = {}
         if plc is not None and action is not None:
             am = ActionMaker(plc, action)
             last = yield am.execute()
-            print last
+        yield returnValue(last)
 
 
     def _get_plc_by_id(self, id):

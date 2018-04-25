@@ -25,16 +25,19 @@ class ActionMaker(object):
     def execute(self):
         try:
             while self.current_step>=0:
+                print 'Start step {}'.format(self.current_step)
                 step=self._get_current_step()
                 print 'Executing action {}: '.format(step.get('method'))
                 self.action_params = yield ActionStepper.make_step(self.plc,
                                                      step, self.action_params)
+                print 'Step {} done'.format(self.current_step)
                 self.current_step=self.action_params.get('current_step')
                 print 'Next step: {}'.format(self.current_step)
         except Exception as e:
             print 'Error while execute'
             print e.args
-            yield sleep(5.0)
+        print 'Action result: '
+        print self.action_params
         yield returnValue(self.action_params)
 
 
@@ -56,7 +59,6 @@ class ActionStepper(object):
     @inlineCallbacks
     def make_step(plc, step, params):
         try:
-            print 'Start step: {}'.format(step.get('id'))
             params=ActionStepper.make_params_from_step(step, params)
             method_name=step.get('method')
             method = getattr(plc, method_name)

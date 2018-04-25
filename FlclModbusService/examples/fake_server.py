@@ -114,7 +114,7 @@ def run_async_server(c):
         StartTcpServer(context, identity=identity, address=("localhost", 5020))
     elif c == '2':
         print 'Start UDP'
-        StartUdpServer(context, identity=identity, address=("localhost", 502))
+        StartUdpServer(context, identity=identity, address=("127.0.0.1", 502))
     elif c == '3':
         print 'Start Serial RTU'
         StartSerialServer(context, identity=identity, 

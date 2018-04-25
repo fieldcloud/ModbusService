@@ -21,7 +21,7 @@ __version__='0.1.0'
 
 
 MODBUS_TCP_CLIENT='tcp'
-MODBUS_UDB_CLIENT='udp'
+MODBUS_UDP_CLIENT='udp'
 MODBUS_SERIAL_CLIENT='serial'
 
 

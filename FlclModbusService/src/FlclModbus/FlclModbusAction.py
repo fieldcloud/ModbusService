@@ -6,6 +6,7 @@
 '''
 
 from twisted.internet.defer import inlineCallbacks, returnValue
+from FlclModbus.util import sleep
 
 __version__='1.0.0'
 
@@ -22,12 +23,19 @@ class ActionMaker(object):
 
     @inlineCallbacks
     def execute(self):
-        while self.current_step>=0:
-            self.action_params = yield ActionStepper.make_step(self.plc,
-                                                     self._get_current_step(),
-                                                     self.action_params)
-            self.current_step=self.action_params.get('current_step')
-        yield returnValue(self.current_step)
+        try:
+            while self.current_step>=0:
+                step=self._get_current_step()
+                print 'Executing action {}: '.format(step.get('method'))
+                self.action_params = yield ActionStepper.make_step(self.plc,
+                                                     step, self.action_params)
+                self.current_step=self.action_params.get('current_step')
+                print 'Next step: {}'.format(self.current_step)
+        except Exception as e:
+            print 'Error while execute'
+            print e.args
+            yield sleep(5.0)
+        yield returnValue(self.action_params)
 
 
     def _get_step(self, steps, id):
@@ -47,15 +55,16 @@ class ActionStepper(object):
     @staticmethod
     @inlineCallbacks
     def make_step(plc, step, params):
-        next=-1
         try:
+            print 'Start step: {}'.format(step.get('id'))
             params=ActionStepper.make_params_from_step(step, params)
             method_name=step.get('method')
             method = getattr(plc, method_name)
-            res= yield method(step.get('params'))
+            res= yield method(params)
             params=ActionStepper.load_result(step, params, res)
-            params['current_step']=ActionStepper.make_condition(step, params)
+            params=ActionStepper.make_condition(step, params)
         except Exception as e:
+            print 'error making step'
             print e.args
         yield returnValue(params)
 
@@ -81,6 +90,8 @@ class ActionStepper(object):
             if k != 'vars':
                 params[k] = v
             else:
+                if params.get('vars') is None:
+                    params['vars']={}
                 for k1, v1 in v.iteritems():
                     params['vars'][k1] = v1
         return params
@@ -90,24 +101,25 @@ class ActionStepper(object):
     def make_condition(step, params):
         condition = step.get('condition')
         var1=ActionStepper._make_var(condition.get('var1'), params)
-        var1=ActionStepper._make_var(condition.get('var2'), params)
-        to_eval='{} {} {}'.format(var1, condition.get('operator'), var1)
+        var2=ActionStepper._make_var(condition.get('var2'), params)
+        to_eval='{} {} {}'.format(var1, condition.get('operator'), var2)
         res=eval(to_eval)
         if res == True:
-            params['current_step'] = condition.get('success')
+            step=condition.get('success')
         else:
-            params['current_step'] = condition.get('else')
+            step=condition.get('else')
+        params['current_step'] = step
         return params
 
 
     @staticmethod
     def _make_var(var_desc, params):
         var = None
-        if var_desc.get('value') is not None:
-            var = var_desc.get('value')
+        if var_desc.get('val') is not None:
+            var = var_desc.get('val')
         else:
             vars=params.get('vars')
-            for k, v in vars:
+            for k, v in vars.iteritems():
                 if k==var_desc.get('name'):
                     var=v
         return var

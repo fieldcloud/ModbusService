@@ -5,18 +5,82 @@ Module used to manage communication from and to PLCs
 
 '''
 
-from FlclModbus.FlclModbusFactory import *
 from FlclModbus.FlclModbusRegister import *
-import FlclModbus.FlclModbusRegister.ModbusRegisterFormatter as formatter
+from FlclModbus.FlclModbusRegister import ModbusRegisterFormatter as formatter
 from FlclModbus.util import sleep, int_to_bytes, bytes_to_int
 import logging
 from datetime import datetime
 from pymodbus.server.sync import StartTcpServer
 from pymodbus.server.sync import StartUdpServer
 from pymodbus.server.sync import StartSerialServer
-from twisted.internet.defer import inlineCallbacks
+from pymodbus.client.sync import *
+
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 __version__='0.1.0'
+
+
+MODBUS_TCP_CLIENT='tcp'
+MODBUS_UDB_CLIENT='udp'
+MODBUS_SERIAL_CLIENT='serial'
+
+
+def create_client(com_conf):
+    client = None
+    if com_conf is not None:
+        if com_conf.get('type')==MODBUS_TCP_CLIENT:
+            client=ModbusTcpClient(com_conf.get('url'),
+                                   port=com_conf.get('port'))
+        elif com_conf.get('type')==MODBUS_UDP_CLIENT:
+            client=ModbusUdpClient(com_conf.get('url'),
+                                   port=com_conf.get('port'))
+        elif com_conf.get('type')==MODBUS_SERIAL_CLIENT:
+            client=ModbusSerialClient(method=com_conf.get('method'))
+    return client
+
+
+def create_plc_client(plc_conf):
+    plc=None
+    if plc_conf is not None:
+        client = create_client(plc_conf.get('plc_com'))
+        plc=PlcClient(client, plc_conf.get('id'))
+        for r in plc_conf.get('registers'):
+            plc.add_register(create_register(r.get('type'),
+                                             r.get('address'),
+                                             value=r.get('value')))
+    return plc
+
+
+def create_register(type, address, value=0):
+    if value is None:
+        value = 0
+    if type==HOLDING_REGISTER:
+        return ModbusHoldingRegister(address, value=value)
+    elif type==COIL_REGISTER:
+        return ModbusCoilRegister(address, value=value)
+    elif type==INPUT_REGISTER:
+        return ModbusInputRegister(address, value=value)
+    elif type==DISCRETE_INPUT_REGISTER:
+        return ModbusDiscreteInputRegister(address, value=value)
+    else:
+        return None
+
+
+def make_register_table():
+    registers={}
+    for i in range(0, 9999):
+        reg=ModbusCoilRegister(i)
+        registers[str(reg.get_number())]=reg
+    for i in range(0, 9999):
+        reg=ModbusDiscreteInputRegister(i)
+        registers[str(reg.get_number())]=reg
+    for i in range(0, 9999):
+        reg=ModbusInputRegister(i)
+        registers[str(reg.get_number())]=reg
+    for i in range(0, 9999):
+        reg=ModbusHoldingRegister(i)
+        registers[str(reg.get_number())]=reg
+    return registers
 
 
 class PlcClient(object):
@@ -25,7 +89,7 @@ class PlcClient(object):
        Manage modbus communication
     '''
 
-    registers=[]
+    registers={}
     client=None
     id='demo'
 
@@ -37,7 +101,8 @@ class PlcClient(object):
             :type client: pymongo sync client
         '''
         self.client=client
-        registers=make_register_table()
+        self.registers=make_register_table()
+        self.id=id
 
 
 #------------------------------------------------------------------------------#
@@ -61,7 +126,11 @@ class PlcClient(object):
             :return: register at number position
             :rtype: ModbusRegister
         '''
-        return self.registers.get(str(number))
+        reg=None
+        for k, v in self.registers.iteritems():
+            if str(number) == k:
+                reg = v
+        return reg
 
 #------------------------------------------------------------------------------#
 # Modbus communication methods                                                 #
@@ -77,6 +146,7 @@ class PlcClient(object):
         '''
         list=[]
         try:
+            print 'Start reading one'
             number=params.get('number')
             reg = self.get_register(number)
             self.client.connect()
@@ -91,9 +161,16 @@ class PlcClient(object):
             reg.value=v
             self.client.close()
         except Exception as e:
+            print 'error reading one'
             print e.args
             reg=None
-        return list.append(self._make_resp_from_register(reg))
+        if reg is not None:
+            resp=self._make_resp_from_register(reg)
+            if resp is not None:
+                list.append(resp)
+        print 'End reading one with result:'
+        print list
+        return list
 
 
     def write_one(self, params):
@@ -118,7 +195,7 @@ class PlcClient(object):
             self.client.close()
         except Exception as e:
             print e.args
-        return self.read_one(number)
+        return self.read_one(params)
 
 
     def read_multi(self, params):
@@ -179,6 +256,7 @@ class PlcClient(object):
         resp = {}
         resp['number']=register.number
         resp['value']=register.value
+        return resp
 
 
 #------------------------------------------------------------------------------#
@@ -195,10 +273,13 @@ class PlcClient(object):
 # Direct use methods                                                           #
 #------------------------------------------------------------------------------#
     def read_int(self, params):
+        print 'Start reading int'
         r=self.read_one(params)
         for resp in r:
             reg=self.get_register(resp.get('number'))
             resp['value'] = formatter.make_int_from_register(reg)
+        print 'End reading with result:'
+        print r
         return r
 
 

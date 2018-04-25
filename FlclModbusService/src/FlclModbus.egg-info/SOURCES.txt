@@ -1,7 +1,6 @@
 setup.cfg
 setup.py
 src/FlclModbus/FlclModbusAction.py
-src/FlclModbus/FlclModbusFactory.py
 src/FlclModbus/FlclModbusGateway.py
 src/FlclModbus/FlclModbusPlc.py
 src/FlclModbus/FlclModbusRegister.py

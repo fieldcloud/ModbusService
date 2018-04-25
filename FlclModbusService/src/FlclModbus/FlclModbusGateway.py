@@ -7,8 +7,7 @@
 '''
 
 from FlclModbus.FlclModbusAction import ActionMaker
-#from FlclModbus.FlclModbusPlc import PlcClient as plc
-from FlclModbus.FlclModbusFactory import *
+from FlclModbus.FlclModbusPlc import create_plc_client
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet import reactor
 
@@ -29,10 +28,9 @@ class FlclModbusGateway(object):
                 self.plc_conf=json.load(conf)
             with open(self.action_file_path, 'r') as conf:
                 self.action_conf=json.load(conf)
-            print self.plc_conf
-            print self.action_conf
             for plc in self.plc_conf.get('plcs'):
-                self.plcs.append(create_plc_client(plc))
+                p=create_plc_client(plc)
+                self.plcs.append(p)
         except Exception as e:
             print e.args
 
@@ -44,6 +42,7 @@ class FlclModbusGateway(object):
         if plc is not None and action is not None:
             am = ActionMaker(plc, action)
             last = yield am.execute()
+            print last
 
 
     def _get_plc_by_id(self, id):

@@ -47,7 +47,6 @@ REGISTER_TYPES = {
 
 class ModbusRegister(object):
 
-    self.number=0
 
     def __init__(self, type, address, value=0, unit=0x01):
         self.type=type
@@ -76,6 +75,10 @@ class ModbusRegister(object):
         return REGISTER_TYPES.get(self.type)
 
 
+    def get_number(self):
+        return self.number
+
+
 class ModbusReadWriteRegister(ModbusRegister):
 
 
@@ -98,29 +101,32 @@ class ModbusCoilRegister(ModbusReadWriteRegister):
 
 
     def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister(self, COIL_REGISTER, address, value=value, unit=unit)
+        ModbusReadWriteRegister.__init__(self, COIL_REGISTER, address,
+                                          value=value, unit=unit)
 
 
 class ModbusDiscreteInputRegister(ModbusRegister):
 
 
     def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister(self, DISCRETE_INPUT_REGISTER, address, value=value,
-                       unit=unit)
+        ModbusRegister.__init__(self, DISCRETE_INPUT_REGISTER, address,
+                                value=value, unit=unit)
 
 
 class ModbusInputRegister(ModbusRegister):
 
 
     def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister(self, INPUT_REGISTER, address, value=value, unit=unit)
+        ModbusRegister.__init__(self, INPUT_REGISTER, address,
+                                    value=value, unit=unit)
 
 
 class ModbusHoldingRegister(ModbusReadWriteRegister):
 
 
     def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister(self, HOLDING_REGISTER, address, value=value, unit=unit)
+        ModbusReadWriteRegister.__init__(self, HOLDING_REGISTER, address,
+                                      value=value, unit=unit)
 
 
 class ModbusRegisterFormatter(object):

@@ -9,33 +9,29 @@ from FlclModbus.util import int_to_bytes, bytes_to_int
 
 
 HOLDING_REGISTER='holding'
-COIL_REGISTER='coil'
+COIL='coil'
 INPUT_REGISTER='input'
-DISCRETE_INPUT_REGISTER='discrete_input'
+DISCRETE_INPUT='discrete_input'
 
 REGISTER_TYPES = {
-    'coil': {
+    COIL: {
         'offset':1,
         'read_one': 'read_coils',
         'write_one': 'write_coil',
         'read_multi': 'read_coils',
         'write_multi': 'write_coils'
     },
-    'discrete_input': {
+    DISCRETE_INPUT: {
         'offset':10001,
         'read_one': 'read_discrete_inputs',
-        'write_one': None,
         'read_multi': 'read_discrete_inputs',
-        'write_multi': None
     },
-    'input': {
+    INPUT_REGISTER: {
         'offset':30001,
         'read_one': 'read_input_registers',
-        'write_one': None,
         'read_multi': 'read_input_registers',
-        'write_multi': None
     },
-    'holding': {
+    HOLDING_REGISTER: {
         'offset':40001,
         'read_one': 'read_holding_registers',
         'write_one': 'write_register',
@@ -45,30 +41,15 @@ REGISTER_TYPES = {
 }
 
 
-class ModbusRegister(object):
+class ModbusData(object):
 
 
-    def __init__(self, type, address, value=0, unit=0x01):
+    def __init__(self, type, address, value, unit=0x01):
         self.type=type
         self.address=address
         self.value=value
         self.unit=unit
-        self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
-        self.bin_value= self.bin_value.lstrip('0b')
         self.number=self.address+REGISTER_TYPES.get(type).get('offset')
-
-
-    def set_value(self, value):
-        self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
-        self.bin_value= self.bin_value.lstrip('0b')
-        self.value=value
-
-
-    def get_bit_at(self,pos=0):
-        if pos >= 0 and pos <16:
-            return int(self.bin_value[abs(pos-15)])
-        else:
-            return -1
 
 
     def get_type_description(self):
@@ -79,7 +60,70 @@ class ModbusRegister(object):
         return self.number
 
 
-class ModbusReadWriteRegister(ModbusRegister):
+class ModbusRegister(ModbusData):
+
+
+    def __init__(self, type, address, value=0, unit=0x01):
+        ModbusData.__init__(self, type, address, value, unit=0x01)
+        self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
+        self.bin_value= self.bin_value.lstrip('0b')
+
+
+    def get_bit_at(self,pos=0):
+        if pos >= 0 and pos <16:
+            return int(self.bin_value[abs(pos-15)])
+        else:
+            return -1
+
+
+    def set_value(self, value):
+        self.bin_value= str(value) if value<=1 else bin(value>>1)+str(value&1)
+        self.bin_value= self.bin_value.lstrip('0b')
+        self.value=value
+
+
+
+class ModbusSingle(ModbusData):
+
+
+    def __init__(self, type, address, value=False, unit=0x01):
+        ModbusData.__init__(self, type, address, value, unit=0x01)
+
+
+class ModbusCoil(ModbusSingle):
+
+
+    def __init__(self, address, value=False, unit=0x01):
+        ModbusSingle.__init__(self, COIL, address,
+                                          value=value, unit=unit)
+
+
+    def set_value(self, value):
+        self.value=value
+
+
+class ModbusDiscreteInput(ModbusSingle):
+
+
+    def __init__(self, address, value=False, unit=0x01):
+        ModbusSingle.__init__(self, DISCRETE_INPUT, address,
+                                value=value, unit=unit)
+
+
+class ModbusInputRegister(ModbusRegister):
+
+
+    def __init__(self, address, value=0, unit=0x01):
+        ModbusRegister.__init__(self, INPUT_REGISTER, address,
+                                    value=value, unit=unit)
+
+
+class ModbusHoldingRegister(ModbusRegister):
+
+
+    def __init__(self, address, value=0, unit=0x01):
+        ModbusRegister.__init__(self, HOLDING_REGISTER, address,
+                                      value=value, unit=unit)
 
 
     def set_bit_value(self, pos, val):
@@ -95,38 +139,6 @@ class ModbusReadWriteRegister(ModbusRegister):
             p=p+1
         self.bin_value = new
         self.value = int(new,2)
-
-
-class ModbusCoilRegister(ModbusReadWriteRegister):
-
-
-    def __init__(self, address, value=0, unit=0x01):
-        ModbusReadWriteRegister.__init__(self, COIL_REGISTER, address,
-                                          value=value, unit=unit)
-
-
-class ModbusDiscreteInputRegister(ModbusRegister):
-
-
-    def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister.__init__(self, DISCRETE_INPUT_REGISTER, address,
-                                value=value, unit=unit)
-
-
-class ModbusInputRegister(ModbusRegister):
-
-
-    def __init__(self, address, value=0, unit=0x01):
-        ModbusRegister.__init__(self, INPUT_REGISTER, address,
-                                    value=value, unit=unit)
-
-
-class ModbusHoldingRegister(ModbusReadWriteRegister):
-
-
-    def __init__(self, address, value=0, unit=0x01):
-        ModbusReadWriteRegister.__init__(self, HOLDING_REGISTER, address,
-                                      value=value, unit=unit)
 
 
 class ModbusRegisterFormatter(object):

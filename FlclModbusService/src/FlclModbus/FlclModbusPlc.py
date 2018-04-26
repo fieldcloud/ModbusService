@@ -56,12 +56,12 @@ def create_register(type, address, value=0):
         value = 0
     if type==HOLDING_REGISTER:
         return ModbusHoldingRegister(address, value=value)
-    elif type==COIL_REGISTER:
-        return ModbusCoilRegister(address, value=value)
+    elif type==COIL:
+        return ModbusCoil(address, value=value)
     elif type==INPUT_REGISTER:
         return ModbusInputRegister(address, value=value)
-    elif type==DISCRETE_INPUT_REGISTER:
-        return ModbusDiscreteInputRegister(address, value=value)
+    elif type==DISCRETE_INPUT:
+        return ModbusDiscreteInput(address, value=value)
     else:
         return None
 
@@ -69,10 +69,10 @@ def create_register(type, address, value=0):
 def make_register_table():
     registers={}
     for i in range(0, 9999):
-        reg=ModbusCoilRegister(i)
+        reg=ModbusCoil(i)
         registers[str(reg.get_number())]=reg
     for i in range(0, 9999):
-        reg=ModbusDiscreteInputRegister(i)
+        reg=ModbusDiscreteInput(i)
         registers[str(reg.get_number())]=reg
     for i in range(0, 9999):
         reg=ModbusInputRegister(i)
@@ -153,12 +153,24 @@ class PlcClient(object):
             desc = reg.get_type_description()
             method_name = desc.get('read_one')
             method = getattr(self.client, method_name)
+            br = isinstance(reg, ModbusCoil) == True
+            br = br or isinstance(reg, ModbusDiscreteInput) == True
+            print br
             rr = method(reg.address, 1, unit=reg.unit)
-            if rr.function_code<=80:
-                v = rr.registers[0]
+            if br == True:
+                if rr.function_code<=80:
+                    reg.value= rr.bits[0]
+                else:
+                    reg.value=-1
+                return reg
             else:
-                v = 0
-            reg.value=v
+                print rr
+                if rr.function_code<=80:
+                    v = rr.registers[0]
+                else:
+                    v = -1
+                reg.value=v
+            print reg
             self.client.close()
         except Exception as e:
             print 'error reading one'
@@ -186,13 +198,19 @@ class PlcClient(object):
             number=params.get('number')
             value=params.get('value')
             reg = self.get_register(number)
-            reg.set_value(value)
-            self.client.connect()
-            desc = reg.get_type_description()
-            method_name = desc.get('write_one')
-            method = getattr(self.client, method_name)
-            rr = method(reg.address, value)
-            self.client.close()
+            writable=isinstance(reg, ModbusCoil)
+            writable=writable or isinstance(reg, ModbusHoldingRegister)
+            if writable == True:
+                reg.set_value(value)
+                self.client.connect()
+                desc = reg.get_type_description()
+                method_name = desc.get('write_one')
+                method = getattr(self.client, method_name)
+                if isinstance(reg, ModbusHoldingRegister):
+                    rr = method(reg.address, value, unit=0x01)
+                else:
+                    rr = method(reg.address, [value], unit=0x01)
+                self.client.close()
         except Exception as e:
             print e.args
         return self.read_one(params)
@@ -217,13 +235,18 @@ class PlcClient(object):
             method_name = desc.get('read_multi')
             method = getattr(self.client, method_name)
             rr = method(reg.address, nb, unit=reg.unit)
+            br = isinstance(reg, ModbusCoil) == True
+            br = br or isinstance(reg, ModbusDiscreteInput) == True
+            if rr.function_code<=80:
+                if br == True:
+                    l=rr.bits
+                else:
+                    l=rr.registers
+            else:
+                l=[0]*nb
             for i in range(0, nb):
                 reg = self.get_register(first+i)
-                if rr.function_code<=80:
-                    v = rr.registers[i]
-                else:
-                    v = 0
-                reg.value=v
+                reg.value=l[i]
                 list.append(self._make_resp_from_register(reg))
             self.client.close()
         except Exception as e:
@@ -242,14 +265,21 @@ class PlcClient(object):
         '''
         list=[]
         start=params.get('start')
-        value=params.get('value')
-        nb=params.get('count')
-        values=int_to_bytes(value, nb)
-        for i in (0, nb):
-            r=self.write_one((start+i), values[i])
-            if len(r) == 1:
-               list.append(r[0])
-        return list
+        values=params.get('values')
+        try:
+            writable=isinstance(reg, ModbusCoil)
+            writable=writable or isinstance(reg, ModbusHoldingRegister)
+            if writable == True:
+                reg = self.get_register(first)
+                self.client.connect()
+                desc = reg.get_type_description()
+                method_name = desc.get('write_multi')
+                method = getattr(self.client, method_name)
+                rr = method(reg.address, values, unit=reg.unit)
+                self.client.close()
+        except Exception as e:
+            print e.args
+        return self.readmulti(params)
 
 
     def _make_resp_from_register(self, register):
